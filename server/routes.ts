@@ -644,19 +644,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: `Invalid network ${selectedNetwork} for ${cryptocurrency}` });
       }
 
-      // Check buyout limit (first 10 users only)
+      // Check investor limit (first 10 users only)
       if (isBuyout) {
-        const buyoutCount = await db.select({ count: count() })
-          .from(payments)
-          .where(and(
-            eq(payments.postId, post.id),
-            eq(payments.isBuyout, true)
-          ))
+        const investorCount = await db.select({ count: count() })
+          .from(investors)
+          .where(eq(investors.postId, post.id))
           .then(result => result[0]?.count ?? 0);
 
-        if (buyoutCount >= 10) {
+        if (investorCount >= 10) {
           return res.status(400).json({ 
-            error: 'Buyout option is limited to the first 10 buyers' 
+            error: 'All 10 investor spots are filled. You can still unlock at regular price.' 
           });
         }
       }

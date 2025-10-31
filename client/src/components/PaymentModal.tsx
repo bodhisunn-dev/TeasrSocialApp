@@ -339,12 +339,12 @@ export function PaymentModal({ isOpen, onClose, post, onSuccess, paymentType = '
               <div className="flex items-center justify-between p-3 bg-muted rounded-lg">
                 <div className="space-y-0.5 flex-1">
                   <Label htmlFor="buyout" className={isBuyoutFull ? 'text-muted-foreground' : ''}>
-                    Buyout Option {isBuyoutFull && '(Full)'}
+                    Investor Option {isBuyoutFull && '(Sold Out)'}
                   </Label>
                   <p className="text-xs text-muted-foreground">
                     {isBuyoutFull 
-                      ? 'All 10 investor spots have been filled' 
-                      : `Pay ${post.buyoutPrice} for permanent ownership`}
+                      ? 'All 10 investor spots filled - you can still unlock at regular price' 
+                      : `Become 1 of 10 investors and earn from future unlocks`}
                   </p>
                 </div>
                 <Switch
