@@ -650,6 +650,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .where(eq(investors.postId, post.id))
         .then(result => result[0]?.count ?? 0);
 
+      console.log(`Payment attempt - postId: ${post.id}, investorCount: ${investorCount}, isBuyout: ${isBuyout}`);
+
       // Prevent buyout if 10 spots filled, but allow regular unlock
       if (isBuyout && investorCount >= 10) {
         return res.status(400).json({ 
@@ -657,10 +659,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      // Calculate actual payment amount - force regular price if investor spots full
+      // Calculate actual payment amount
+      // If buyout is selected AND spots available AND buyoutPrice exists, use buyout price
+      // Otherwise use regular price
       const actualPrice = (isBuyout && investorCount < 10 && post.buyoutPrice) 
         ? post.buyoutPrice 
         : post.price;
+
+      console.log(`Calculated price: ${actualPrice} (isBuyout: ${isBuyout}, investorCount: ${investorCount})`);
 
       // Create payment record
       await storage.createPayment({

@@ -53,12 +53,17 @@ export function PaymentModal({ isOpen, onClose, post, onSuccess, paymentType = '
   };
 
   // Use comment fee if unlocking comments, otherwise use post price
-  // Force regular price if buyout spots are full OR if not selecting buyout
   const basePrice = isCommentUnlock ? (post.commentFee || '0') : post.price;
-  const buyoutPrice = (post.buyoutPrice && !isBuyoutFull && isBuyout) ? post.buyoutPrice : null;
   
-  const convertedPrice = getConvertedPrice(basePrice);
-  const convertedBuyoutPrice = buyoutPrice ? getConvertedPrice(buyoutPrice) : null;
+  // Only use buyout price if:
+  // 1. Not unlocking comments
+  // 2. Buyout price exists
+  // 3. Investor spots not full
+  // 4. User selected buyout option
+  const shouldUseBuyoutPrice = !isCommentUnlock && post.buyoutPrice && !isBuyoutFull && isBuyout;
+  const finalPrice = shouldUseBuyoutPrice ? post.buyoutPrice : basePrice;
+  
+  const convertedPrice = getConvertedPrice(finalPrice);
 
   const handlePayment = async () => {
     setIsProcessing(true);
@@ -123,12 +128,14 @@ export function PaymentModal({ isOpen, onClose, post, onSuccess, paymentType = '
       await new Promise(resolve => setTimeout(resolve, 1000));
 
       // Calculate payment amount in selected cryptocurrency
+      const shouldUseBuyoutForPayment = !isCommentUnlock && isBuyout && !isBuyoutFull && post.buyoutPrice;
       const usdPrice = isCommentUnlock 
         ? (post.commentFee || '0')
-        : (isBuyout && post.buyoutPrice ? post.buyoutPrice : post.price);
-      const paymentAmount = selectedCrypto === 'USDC'
-        ? usdPrice
-        : (isBuyout && convertedBuyoutPrice ? convertedBuyoutPrice : convertedPrice).toString();
+        : (shouldUseBuyoutForPayment ? post.buyoutPrice : post.price);
+      const cryptoPrice = getConvertedPrice(usdPrice);
+      const paymentAmount = selectedCrypto === 'USDC' ? usdPrice : cryptoPrice.toString();
+      
+      console.log('Payment details:', { usdPrice, cryptoPrice, paymentAmount, selectedCrypto, isBuyout, isBuyoutFull });
 
       // Use different endpoint for comment unlock
       const endpoint = isCommentUnlock 
@@ -338,34 +345,35 @@ export function PaymentModal({ isOpen, onClose, post, onSuccess, paymentType = '
             )}
 
             {/* Buyout Option - only for content, not comments, and only if spots available */}
-            {!isCommentUnlock && post.buyoutPrice && !isBuyoutFull && (
-              <div className="flex items-center justify-between p-3 bg-muted rounded-lg">
-                <div className="space-y-0.5 flex-1">
-                  <Label htmlFor="buyout">
-                    Investor Option
-                  </Label>
-                  <p className="text-xs text-muted-foreground">
-                    Become 1 of 10 investors and earn $0.05 from every future unlock
-                  </p>
-                </div>
-                <Switch
-                  id="buyout"
-                  checked={isBuyout}
-                  onCheckedChange={setIsBuyout}
-                />
-              </div>
-            )}
-
-            {/* Show info when investor spots are full */}
-            {!isCommentUnlock && post.buyoutPrice && isBuyoutFull && (
-              <div className="p-3 bg-purple-500/10 border border-purple-500/20 rounded-lg">
-                <p className="text-sm font-medium text-purple-600 dark:text-purple-400">
-                  All 10 investor spots filled! Unlocking at regular price.
-                </p>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Your payment helps the 10 investors earn $0.05 each
-                </p>
-              </div>
+            {!isCommentUnlock && post.buyoutPrice && (
+              <>
+                {!isBuyoutFull ? (
+                  <div className="flex items-center justify-between p-3 bg-muted rounded-lg">
+                    <div className="space-y-0.5 flex-1">
+                      <Label htmlFor="buyout">
+                        Investor Option
+                      </Label>
+                      <p className="text-xs text-muted-foreground">
+                        Become 1 of 10 investors and earn $0.05 from every future unlock
+                      </p>
+                    </div>
+                    <Switch
+                      id="buyout"
+                      checked={isBuyout}
+                      onCheckedChange={setIsBuyout}
+                    />
+                  </div>
+                ) : (
+                  <div className="p-3 bg-purple-500/10 border border-purple-500/20 rounded-lg">
+                    <p className="text-sm font-medium text-purple-600 dark:text-purple-400">
+                      All 10 investor spots filled! Unlocking at regular price.
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Your payment helps the 10 investors earn $0.05 each
+                    </p>
+                  </div>
+                )}
+              </>
             )}
 
             <div className="space-y-2">
@@ -376,13 +384,13 @@ export function PaymentModal({ isOpen, onClose, post, onSuccess, paymentType = '
                     <RefreshCw className="w-3 h-3 text-muted-foreground" />
                   )}
                   <Badge className="bg-primary text-primary-foreground text-lg px-4 py-1 font-bold" data-testid="badge-payment-price">
-                    {`${(convertedBuyoutPrice || convertedPrice).toFixed(selectedCrypto === 'USDC' ? 2 : 6)} ${selectedCrypto}`}
+                    {`${convertedPrice.toFixed(selectedCrypto === 'USDC' ? 2 : 6)} ${selectedCrypto}`}
                   </Badge>
                 </div>
               </div>
               {selectedCrypto !== 'USDC' && (
                 <div className="flex items-center justify-between text-xs text-muted-foreground">
-                  <span>≈ ${isCommentUnlock ? (post.commentFee || '0') : (buyoutPrice || post.price)} USD</span>
+                  <span>≈ ${finalPrice} USD</span>
                   {prices && typeof prices[selectedCrypto as keyof typeof prices] === 'number' && (
                     <span>1 {selectedCrypto} = ${prices[selectedCrypto as keyof typeof prices].toFixed(2)}</span>
                   )}
