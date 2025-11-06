@@ -32,8 +32,6 @@ export function PaymentModal({ isOpen, onClose, post, onSuccess, paymentType = '
   const acceptedCryptos = post.acceptedCryptos.split(',');
   const isCommentUnlock = paymentType === 'comment';
 
-  // Check if buyout is full (10 investors)
-  const isBuyoutFull = (post.investorCount || 0) >= 10;
 
   // Fetch live crypto prices
   const { data: prices } = useQuery({
@@ -52,6 +50,14 @@ export function PaymentModal({ isOpen, onClose, post, onSuccess, paymentType = '
     return parseFloat((usdAmount / cryptoPrice).toFixed(6));
   };
 
+  // Get max investors and investor revenue share from post
+  const maxInvestorSlots = post.maxInvestors || 10;
+  const isBuyoutFull = (post.investorCount || 0) >= maxInvestorSlots;
+  const investorRevenueShare = parseFloat(post.investorRevenueShare || '0');
+  
+  // Platform fee (always 0.05 USDC on locked content)
+  const PLATFORM_FEE_USDC = 0.05;
+  
   // Use comment fee if unlocking comments, otherwise use post price
   const basePrice = isCommentUnlock ? (post.commentFee || '0') : post.price;
   
@@ -64,6 +70,7 @@ export function PaymentModal({ isOpen, onClose, post, onSuccess, paymentType = '
   const finalPrice = shouldUseBuyoutPrice ? post.buyoutPrice : basePrice;
   
   const convertedPrice = getConvertedPrice(finalPrice);
+  const convertedBuyoutPrice = post.buyoutPrice ? getConvertedPrice(post.buyoutPrice) : null;
 
   const handlePayment = async () => {
     setIsProcessing(true);
@@ -352,7 +359,7 @@ export function PaymentModal({ isOpen, onClose, post, onSuccess, paymentType = '
                     Investor Option
                   </Label>
                   <p className="text-xs text-muted-foreground">
-                    Become 1 of 10 investors and earn $0.05 from every future unlock
+                    Become 1 of {maxInvestorSlots} investors{investorRevenueShare > 0 ? ` and earn ${investorRevenueShare}% from future unlocks` : ''}
                   </p>
                 </div>
                 <Switch
@@ -364,18 +371,18 @@ export function PaymentModal({ isOpen, onClose, post, onSuccess, paymentType = '
             )}
 
             {/* Show message when investor spots are full */}
-            {!isCommentUnlock && isBuyoutFull && (
+            {!isCommentUnlock && isBuyoutFull && investorRevenueShare > 0 && (
               <div className="p-3 bg-purple-500/10 border border-purple-500/20 rounded-lg">
                 <p className="text-sm font-medium text-purple-600 dark:text-purple-400">
-                  All 10 investor spots filled!
+                  All {maxInvestorSlots} investor spots filled!
                 </p>
                 <p className="text-xs text-muted-foreground mt-1">
-                  Unlocking at regular price. Your payment helps the 10 investors earn $0.05 each.
+                  Unlocking at regular price. {investorRevenueShare}% of your payment (after platform fees) goes to the {maxInvestorSlots} investors.
                 </p>
               </div>
             )}
 
-            <div className="space-y-2">
+            <div className="space-y-3 border border-border rounded-lg p-4 bg-card">
               <div className="flex items-center justify-between">
                 <span className="text-sm font-medium">Price in {selectedCrypto}</span>
                 <div className="flex items-center space-x-2">
@@ -395,6 +402,29 @@ export function PaymentModal({ isOpen, onClose, post, onSuccess, paymentType = '
                   )}
                 </div>
               )}
+              
+              {/* Platform Fee Breakdown */}
+              <div className="pt-3 mt-3 border-t border-border space-y-2">
+                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Fee Breakdown</p>
+                <div className="flex justify-between text-xs">
+                  <span className="text-muted-foreground">Platform Fee</span>
+                  <span className="font-medium">${PLATFORM_FEE_USDC.toFixed(2)} USDC</span>
+                </div>
+                {!isBuyoutFull && investorRevenueShare > 0 && (
+                  <div className="flex justify-between text-xs">
+                    <span className="text-muted-foreground">Investor Share ({investorRevenueShare}%)</span>
+                    <span className="font-medium">
+                      ${((parseFloat(finalPrice) - PLATFORM_FEE_USDC) * investorRevenueShare / 100).toFixed(2)} USDC
+                    </span>
+                  </div>
+                )}
+                <div className="flex justify-between text-xs">
+                  <span className="text-muted-foreground">Creator Receives</span>
+                  <span className="font-medium text-green-600 dark:text-green-400">
+                    ${((parseFloat(finalPrice) - PLATFORM_FEE_USDC) * (1 - investorRevenueShare / 100)).toFixed(2)} USDC
+                  </span>
+                </div>
+              </div>
             </div>
           </div>
 
