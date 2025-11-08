@@ -102,13 +102,12 @@ export default function Messages() {
       if (!selectedUser || !address) throw new Error('No recipient or wallet');
 
       const payload = {
-        recipientId: selectedUser.id,
         content: content.trim(),
       };
 
       console.log('[Send Debug] Sending message to:', selectedUser.id, 'content:', content);
 
-      const res = await fetch(`${API_URL}/api/messages`, {
+      const res = await fetch(`${API_URL}/api/messages/${selectedUser.id}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
