@@ -129,6 +129,8 @@ export interface IStorage {
 
   // Added method signature
   getUsersWhoPaidForContent(creatorId: string): Promise<User[]>;
+  getCreatorsCurrentUserPaid(userId: string): Promise<User[]>;
+  getPaymentRelationshipsForUser(userId: string): Promise<{ patrons: User[]; creatorsPaid: User[] }>;
 
   // Revenue methods
   getPostRevenue(postId: string): Promise<string>;
@@ -891,7 +893,6 @@ export class DatabaseStorage implements IStorage {
           profileImagePath: users.profileImagePath,
           bio: users.bio,
           createdAt: users.createdAt,
-          updatedAt: users.updatedAt,
         })
         .from(users)
         .innerJoin(payments, eq(payments.userId, users.id))
@@ -900,10 +901,43 @@ export class DatabaseStorage implements IStorage {
           eq(posts.creatorId, creatorId),
           eq(payments.paymentType, 'content')
         ))
-        .orderBy(desc(payments.paidAt))
     );
 
     return paidUsers;
+  }
+
+  // Get creators whose content the current user has paid for
+  async getCreatorsCurrentUserPaid(userId: string): Promise<User[]> {
+    const creators = await withRetry(() =>
+      db
+        .selectDistinct({
+          id: users.id,
+          username: users.username,
+          walletAddress: users.walletAddress,
+          profileImagePath: users.profileImagePath,
+          bio: users.bio,
+          createdAt: users.createdAt,
+        })
+        .from(users)
+        .innerJoin(posts, eq(posts.creatorId, users.id))
+        .innerJoin(payments, eq(payments.postId, posts.id))
+        .where(and(
+          eq(payments.userId, userId),
+          eq(payments.paymentType, 'content')
+        ))
+    );
+
+    return creators;
+  }
+
+  // Get both payment relationships for a user
+  async getPaymentRelationshipsForUser(userId: string): Promise<{ patrons: User[]; creatorsPaid: User[] }> {
+    const [patrons, creatorsPaid] = await Promise.all([
+      this.getUsersWhoPaidForContent(userId),
+      this.getCreatorsCurrentUserPaid(userId)
+    ]);
+
+    return { patrons, creatorsPaid };
   }
 
   // Referral Code Methods (Added)

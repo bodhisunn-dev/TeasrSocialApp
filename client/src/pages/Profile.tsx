@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useRoute, Link } from 'wouter';
+import { useRoute, Link, useLocation } from 'wouter';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -10,8 +10,8 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ArrowLeft, Edit, Upload, User, Users, FileText, Lock, DollarSign } from 'lucide-react';
-import { UserWithStats, PostWithCreator } from '@shared/schema';
+import { ArrowLeft, Edit, Upload, User, Users, FileText, Lock, DollarSign, MessageCircle } from 'lucide-react';
+import { UserWithStats, PostWithCreator, User as UserType } from '@shared/schema';
 import { useWallet } from '@/lib/wallet';
 import { useToast } from '@/hooks/use-toast';
 import { apiRequest } from '@/lib/queryClient';
@@ -89,6 +89,7 @@ export default function Profile() {
   const { address } = useWallet();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const [, setLocation] = useLocation();
   const [showEditModal, setShowEditModal] = useState(false);
   const [editUsername, setEditUsername] = useState('');
   const [editBio, setEditBio] = useState('');
@@ -121,6 +122,9 @@ export default function Profile() {
     },
   });
 
+  // Check if viewing own profile
+  const isOwnProfile = profile && address && profile.walletAddress.toLowerCase() === address.toLowerCase();
+
   const { data: allPosts } = useQuery<PostWithCreator[]>({
     queryKey: ['/api/posts', address],
     queryFn: async () => {
@@ -134,6 +138,24 @@ export default function Profile() {
       return response.json();
     },
   });
+
+  // Check if current user has paid for this profile user's content
+  const { data: paymentRelationships } = useQuery<{ patrons: UserType[]; creatorsPaid: UserType[] }>({
+    queryKey: ['payment-relationships', address],
+    enabled: !!address && !isOwnProfile,
+    queryFn: async () => {
+      const walletAddress = (window as any).walletAddress || address;
+      const response = await fetch('/api/users/payment-relationships', {
+        headers: walletAddress ? { 'x-wallet-address': walletAddress } : {},
+      });
+      if (!response.ok) {
+        return { patrons: [], creatorsPaid: [] };
+      }
+      return response.json();
+    },
+  });
+
+  const hasUnlockedProfile = paymentRelationships?.creatorsPaid.some(user => user.id === profile?.id) || false;
 
   // Show all posts created by this user (including locked ones for visitors)
   const userPosts = allPosts?.filter(post => post.creatorId === profile?.id) || [];
@@ -252,8 +274,6 @@ export default function Profile() {
     updateProfileMutation.mutate(formData);
   };
 
-  const isOwnProfile = profile && address && profile.walletAddress.toLowerCase() === address.toLowerCase();
-
   if (isLoading) {
     return (
       <div className="min-h-screen bg-background">
@@ -314,15 +334,29 @@ export default function Profile() {
                     Edit Profile
                   </Button>
                 ) : (
-                  <Button 
-                    onClick={() => followMutation.mutate()} 
-                    variant={profile.isFollowing ? "outline" : "default"}
-                    disabled={!address || followMutation.isPending}
-                    className="w-full sm:w-auto"
-                    data-testid="button-follow"
-                  >
-                    {profile.isFollowing ? 'Unfollow' : 'Follow'}
-                  </Button>
+                  <div className="flex gap-2 w-full sm:w-auto">
+                    <Button 
+                      onClick={() => followMutation.mutate()} 
+                      variant={profile.isFollowing ? "outline" : "default"}
+                      disabled={!address || followMutation.isPending}
+                      className="flex-1 sm:flex-initial"
+                      data-testid="button-follow"
+                    >
+                      {profile.isFollowing ? 'Unfollow' : 'Follow'}
+                    </Button>
+                    {hasUnlockedProfile && (
+                      <Button 
+                        onClick={() => setLocation(`/messages?user=${profile.id}`)} 
+                        variant="outline"
+                        disabled={!address}
+                        className="flex-1 sm:flex-initial"
+                        data-testid="button-message"
+                      >
+                        <MessageCircle className="w-4 h-4 mr-2" />
+                        Message
+                      </Button>
+                    )}
+                  </div>
                 )}
               </div>
 
