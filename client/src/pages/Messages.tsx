@@ -8,7 +8,6 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Send, User, ArrowLeft } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import type { DirectMessageWithUsers, User as UserType } from '@shared/schema';
@@ -16,13 +15,6 @@ import { useLocation } from 'wouter';
 import { Navbar } from '@/components/Navbar';
 
 const API_URL = 'https://c762b603-597d-4da8-ba6b-42f2889fe9d1-00-3qi12bbre3n9x.picard.replit.dev';
-
-interface Conversation {
-  user: UserType;
-  lastMessage: string;
-  lastMessageAt: string;
-  hasUnread: boolean;
-}
 
 export default function Messages() {
   const { address } = useWallet();
@@ -49,22 +41,7 @@ export default function Messages() {
   });
 
   // -----------------------------
-  // 2. Conversations
-  // -----------------------------
-  const { data: conversations = [] } = useQuery<Conversation[]>({
-    queryKey: ['conversations', address],
-    enabled: !!address,
-    queryFn: async () => {
-      const res = await fetch(`${API_URL}/api/messages/conversations`, {
-        headers: { 'x-wallet-address': address || '' },
-      });
-      if (!res.ok) throw new Error('Failed to load convos');
-      return res.json() as Promise<Conversation[]>;
-    },
-  });
-
-  // -----------------------------
-  // 3. Paid Users
+  // 2. Paid Users (users who paid for your content or you paid for their content)
   // -----------------------------
   const { data: paidUsers = [] } = useQuery<UserType[]>({
     queryKey: ['paid-users', currentUser?.id],
@@ -127,7 +104,7 @@ export default function Messages() {
     onSuccess: () => {
       setInput('');
       queryClient.invalidateQueries({ queryKey: ['messages', selectedUser?.id] });
-      queryClient.invalidateQueries({ queryKey: ['conversations', address] });
+      queryClient.invalidateQueries({ queryKey: ['paid-users', currentUser?.id] });
     },
     onError: (err: any) => {
       console.error('[Send Error]', err);
@@ -171,83 +148,43 @@ export default function Messages() {
         </Button>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 h-[calc(100vh-140px)]">
-          {/* Sidebar: Conversations & Paid Users */}
-          <Card className={`${selectedUser ? 'hidden md:block' : ''} md:col-span-1 overflow-hidden`}>
-            <div className="p-3 border-b font-bold">Messages</div>
-            <Tabs defaultValue="conversations" className="h-full">
-              <TabsList className="grid grid-cols-2">
-                <TabsTrigger value="conversations">Conversations</TabsTrigger>
-                <TabsTrigger value="paid-users">Paid Users</TabsTrigger>
-              </TabsList>
-
-              <TabsContent value="conversations" className="mt-0 p-0 h-[calc(100%-40px)]">
-                <ScrollArea className="h-full">
-                  {conversations.length === 0 ? (
-                    <p className="p-4 text-center text-sm text-muted-foreground">No conversations yet</p>
-                  ) : (
-                    conversations.map((conv) => (
-                      <div
-                        key={conv.user.id}
-                        className={`p-3 border-b cursor-pointer hover:bg-accent/50 transition-colors ${
-                          selectedUser?.id === conv.user.id ? 'bg-accent/50' : ''
-                        }`}
-                        onClick={() => setSelectedUser(conv.user)}
-                      >
-                        <div className="flex items-start gap-3">
-                          <Avatar className="w-8 h-8 flex-shrink-0">
-                            <AvatarImage src={conv.user.profileImagePath || ''} alt={conv.user.username} />
-                            <AvatarFallback>
-                              <User className="w-4 h-4" />
-                            </AvatarFallback>
-                          </Avatar>
-                          <div className="flex-1 min-w-0">
-                            <div className="flex justify-between items-start">
-                              <p className="font-medium truncate">@{conv.user.username}</p>
-                              {conv.hasUnread && <div className="w-2 h-2 bg-primary rounded-full self-start mt-1" />}
-                            </div>
-                            <p className="text-xs text-muted-foreground truncate">{conv.lastMessage}</p>
-                            <p className="text-xs text-muted-foreground">
-                              {formatDistanceToNow(new Date(conv.lastMessageAt), { addSuffix: true })}
-                            </p>
-                          </div>
-                        </div>
+          {/* Sidebar: Chats with Paid Users */}
+          <Card className={`${selectedUser ? 'hidden md:block' : ''} md:col-span-1 overflow-hidden flex flex-col`}>
+            <div className="p-3 border-b font-bold">Chats</div>
+            <ScrollArea className="flex-1">
+              {paidUsers.length === 0 ? (
+                <div className="p-4 text-center">
+                  <p className="text-sm text-muted-foreground">No chats available</p>
+                  <p className="text-xs text-muted-foreground mt-2">
+                    Unlock content to start chatting with creators
+                  </p>
+                </div>
+              ) : (
+                paidUsers.map((user) => (
+                  <div
+                    key={user.id}
+                    data-testid={`chat-user-${user.id}`}
+                    className={`p-3 border-b cursor-pointer hover-elevate active-elevate-2 transition-colors ${
+                      selectedUser?.id === user.id ? 'bg-accent/50' : ''
+                    }`}
+                    onClick={() => setSelectedUser(user)}
+                  >
+                    <div className="flex items-start gap-3">
+                      <Avatar className="w-8 h-8 flex-shrink-0">
+                        <AvatarImage src={user.profileImagePath || ''} alt={user.username} />
+                        <AvatarFallback>
+                          <User className="w-4 h-4" />
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium truncate">@{user.username}</p>
+                        <p className="text-xs text-muted-foreground">Available to chat</p>
                       </div>
-                    ))
-                  )}
-                </ScrollArea>
-              </TabsContent>
-
-              <TabsContent value="paid-users" className="mt-0 p-0 h-[calc(100%-40px)]">
-                <ScrollArea className="h-full">
-                  {paidUsers.length === 0 ? (
-                    <p className="p-4 text-center text-sm text-muted-foreground">No paid users yet</p>
-                  ) : (
-                    paidUsers.map((user) => (
-                      <div
-                        key={user.id}
-                        className={`p-3 border-b cursor-pointer hover:bg-accent/50 transition-colors ${
-                          selectedUser?.id === user.id ? 'bg-accent/50' : ''
-                        }`}
-                        onClick={() => setSelectedUser(user)}
-                      >
-                        <div className="flex items-start gap-3">
-                          <Avatar className="w-8 h-8 flex-shrink-0">
-                            <AvatarImage src={user.profileImagePath || ''} alt={user.username} />
-                            <AvatarFallback>
-                              <User className="w-4 h-4" />
-                            </AvatarFallback>
-                          </Avatar>
-                          <div className="flex-1 min-w-0">
-                            <p className="font-medium truncate">@{user.username}</p>
-                            <p className="text-xs text-muted-foreground">Paid for content</p>
-                          </div>
-                        </div>
-                      </div>
-                    ))
-                  )}
-                </ScrollArea>
-              </TabsContent>
-            </Tabs>
+                    </div>
+                  </div>
+                ))
+              )}
+            </ScrollArea>
           </Card>
 
           {/* Chat Panel */}

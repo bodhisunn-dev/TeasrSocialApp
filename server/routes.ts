@@ -1079,20 +1079,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { content, postId } = req.body;
       const receiverId = req.params.receiverId;
 
-      // Check if this is the first message in the conversation
-      const existingMessages = await storage.getMessagesBetweenUsers(user.id, receiverId);
+      // Always verify payment relationship exists
+      // Check if sender paid for receiver's content OR receiver paid for sender's content
+      const senderPaidForReceiver = await storage.hasUserPaidForAnyContent(user.id, receiverId);
+      const receiverPaidForSender = await storage.hasUserPaidForAnyContent(receiverId, user.id);
 
-      if (existingMessages.length === 0) {
-        // First message - verify payment relationship exists
-        // Check if sender paid for receiver's content OR receiver paid for sender's content
-        const senderPaidForReceiver = await storage.hasUserPaidForAnyContent(user.id, receiverId);
-        const receiverPaidForSender = await storage.hasUserPaidForAnyContent(receiverId, user.id);
-
-        if (!senderPaidForReceiver && !receiverPaidForSender) {
-          return res.status(403).json({
-            error: 'You can only message users whose content you have unlocked or who have unlocked your content'
-          });
-        }
+      if (!senderPaidForReceiver && !receiverPaidForSender) {
+        return res.status(403).json({
+          error: 'You can only message users whose content you have unlocked or who have unlocked your content'
+        });
       }
 
       const message = await storage.createDirectMessage({
