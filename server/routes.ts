@@ -180,7 +180,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/users/search', async (req, res) => {
     try {
       const query = req.query.q as string;
-
+      
       if (!query || query.length < 2) {
         return res.json([]);
       }
@@ -212,27 +212,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get payment relationships (both directions)
   app.get('/api/users/payment-relationships', async (req, res) => {
     try {
-      const walletAddress = req.headers['x-wallet-address'] as string;
-      if (!walletAddress) {
-        return res.status(401).json({ error: 'Not authenticated' });
-      }
-
-      const user = await storage.getUserByWalletAddress(walletAddress);
+      const user = await getCurrentUser(req);
       if (!user) {
-        return res.status(404).json({ error: 'User not found' });
+        return res.status(401).json({ error: 'Unauthorized' });
       }
 
       const relationships = await storage.getPaymentRelationshipsForUser(user.id);
       console.log(`Payment relationships for user ${user.id}:`, {
         patronsCount: relationships.patrons.length,
         creatorsPaidCount: relationships.creatorsPaid.length,
-        patrons: relationships.patrons.map(p => p.username),
-        creatorsPaid: relationships.creatorsPaid.map(c => c.username),
       });
       res.json(relationships);
     } catch (error: any) {
       console.error('Get payment relationships error:', error);
-      res.status(500).json({ error: 'Failed to get payment relationships' });
+      res.status(500).json({ error: error.message });
     }
   });
 
@@ -768,7 +761,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           investmentAmount: post.buyoutPrice || post.price,
           totalEarnings: '0.00',
         });
-
+        
         console.log(`User ${user.id} became investor #${position}/${maxInvestorSlots} for post ${post.id}`);
       } else if (paymentNumber > maxInvestorSlots && existingInvestors.length === maxInvestorSlots && parseFloat(post.investorRevenueShare || '0') > 0) {
         // This is a payment after all investor slots filled - distribute revenue share
@@ -777,7 +770,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const investorSharePercentage = parseFloat(post.investorRevenueShare || '0') / 100;
         const totalInvestorShare = revenueAfterPlatformFee * investorSharePercentage;
         const earningsPerInvestor = totalInvestorShare / existingInvestors.length;
-
+        
         console.log(`Payment #${paymentNumber} - Distributing investor revenue:
           Payment: $${paymentAmount}
           Platform Fee: $${PLATFORM_FEE_USDC}
@@ -785,14 +778,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
           Investor Share %: ${post.investorRevenueShare}%
           Total to Investors: $${totalInvestorShare.toFixed(6)}
           Per Investor (${existingInvestors.length} investors): $${earningsPerInvestor.toFixed(6)}`);
-
+        
         for (const investor of existingInvestors) {
           const currentEarnings = parseFloat(investor.totalEarnings || '0');
           const newEarnings = (currentEarnings + earningsPerInvestor).toFixed(6);
           await db.update(investors)
             .set({ totalEarnings: newEarnings })
             .where(eq(investors.id, investor.id));
-
+          
           console.log(`Investor ${investor.userId} (position ${investor.position}): $${investor.totalEarnings} -> $${newEarnings}`);
         }
       }
@@ -802,7 +795,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const updatedInvestors = await db.select()
         .from(investors)
         .where(eq(investors.postId, post.id));
-
+      
       // Broadcast investor count and earnings update to all connected clients
       broadcast({
         type: 'buyoutUpdate',
@@ -815,7 +808,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           })),
         },
       });
-
+      
       // Broadcast individual earnings updates to each investor
       for (const investor of updatedInvestors) {
         broadcast({
@@ -915,7 +908,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Platform fee for comment unlock (0.05 USDC)
       const PLATFORM_FEE_USDC = 0.05;
       const PLATFORM_WALLET = '0x47aB5ba5f987A8f75f8Ef2F0D8FF33De1A04a020';
-
+      
       await db.insert(platformFees).values({
         paymentId: commentPaymentRecord.id,
         postId: post.id,
@@ -1394,7 +1387,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             .then(result => result[0]?.count ?? 0);
 
           const unlocksAfterFirst10 = Math.max(0, totalUnlocks - 10);
-
+          
           console.log(`Post ${investment.postId}: ${totalUnlocks} total unlocks, ${unlocksAfterFirst10} after first 10, earnings: $${investment.totalEarnings}`);
 
           return {
