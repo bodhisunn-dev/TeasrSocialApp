@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useEffect, useState, useRef } from 'react';
@@ -30,21 +31,6 @@ export default function Messages() {
   const queryParams = new URLSearchParams(location.split('?')[1] || '');
   const userIdFromQuery = queryParams.get('user');
 
-  // WebSocket integration for real-time messages
-  useWebSocket((message) => {
-    if (message.type === 'newMessage' && message.payload) {
-      const msg = message.payload as DirectMessageWithUsers;
-      
-      // Invalidate messages query if this message is relevant to current conversation
-      if (selectedUser && (msg.senderId === selectedUser.id || msg.receiverId === selectedUser.id)) {
-        queryClient.invalidateQueries({ queryKey: ['messages', selectedUser.id] });
-      }
-      
-      // Always invalidate conversations to update unread counts
-      queryClient.invalidateQueries({ queryKey: ['payment-relationships', currentUser?.id] });
-    }
-  });
-
   // -----------------------------
   // 1. Current User
   // -----------------------------
@@ -67,7 +53,7 @@ export default function Messages() {
   // -----------------------------
   const { data: paymentRelationships } = useQuery<{ patrons: UserType[]; creatorsPaid: UserType[] }>({
     queryKey: ['payment-relationships', currentUser?.id],
-    enabled: !!currentUser?.id,
+    enabled: !!currentUser?.id && !!address,
     queryFn: async () => {
       const res = await fetch(`${API_URL}/api/users/payment-relationships`, {
         headers: { 'x-wallet-address': address || '' },
@@ -86,6 +72,37 @@ export default function Messages() {
     );
     return uniqueUsers;
   }, [paymentRelationships]);
+
+  // -----------------------------
+  // 3. Messages
+  // -----------------------------
+  const { data: messages = [] } = useQuery<DirectMessageWithUsers[]>({
+    queryKey: ['messages', selectedUser?.id],
+    enabled: !!selectedUser && !!address,
+    queryFn: async () => {
+      if (!selectedUser) return [];
+      const res = await fetch(`${API_URL}/api/messages/${selectedUser.id}`, {
+        headers: { 'x-wallet-address': address || '' },
+      });
+      if (!res.ok) throw new Error('Failed to load messages');
+      return res.json() as Promise<DirectMessageWithUsers[]>;
+    },
+  });
+
+  // WebSocket integration for real-time messages
+  useWebSocket((message) => {
+    if (message.type === 'newMessage' && message.payload) {
+      const msg = message.payload as DirectMessageWithUsers;
+      
+      // Invalidate messages query if this message is relevant to current conversation
+      if (selectedUser && (msg.senderId === selectedUser.id || msg.receiverId === selectedUser.id)) {
+        queryClient.invalidateQueries({ queryKey: ['messages', selectedUser.id] });
+      }
+      
+      // Always invalidate conversations to update unread counts
+      queryClient.invalidateQueries({ queryKey: ['payment-relationships', currentUser?.id] });
+    }
+  });
 
   // Auto-select user from query param when paidUsers loads
   useEffect(() => {
@@ -107,23 +124,7 @@ export default function Messages() {
   }, [messages]);
 
   // -----------------------------
-  // 4. Messages
-  // -----------------------------
-  const { data: messages = [] } = useQuery<DirectMessageWithUsers[]>({
-    queryKey: ['messages', selectedUser?.id],
-    enabled: !!selectedUser && !!address,
-    queryFn: async () => {
-      if (!selectedUser) return [];
-      const res = await fetch(`${API_URL}/api/messages/${selectedUser.id}`, {
-        headers: { 'x-wallet-address': address || '' },
-      });
-      if (!res.ok) throw new Error('Failed to load messages');
-      return res.json() as Promise<DirectMessageWithUsers[]>;
-    },
-  });
-
-  // -----------------------------
-  // 5. Send Message
+  // 4. Send Message
   // -----------------------------
   const sendMutation = useMutation({
     mutationFn: async (content: string) => {
@@ -155,7 +156,7 @@ export default function Messages() {
     onSuccess: () => {
       setInput('');
       queryClient.invalidateQueries({ queryKey: ['messages', selectedUser?.id] });
-      queryClient.invalidateQueries({ queryKey: ['paid-users', currentUser?.id] });
+      queryClient.invalidateQueries({ queryKey: ['payment-relationships', currentUser?.id] });
     },
     onError: (err: any) => {
       console.error('[Send Error]', err);
@@ -164,7 +165,7 @@ export default function Messages() {
   });
 
   // -----------------------------
-  // 6. Mark as Read
+  // 5. Mark as Read
   // -----------------------------
   useEffect(() => {
     if (selectedUser && address) {
@@ -176,15 +177,18 @@ export default function Messages() {
   }, [selectedUser, address]);
 
   // -----------------------------
-  // 7. No Wallet Guard
+  // 6. No Wallet Guard
   // -----------------------------
   if (!address) {
     return (
-      <div className="container mx-auto p-4">
-        <Card className="p-6 text-center">
-          <p>Connect your wallet to view messages</p>
-        </Card>
-      </div>
+      <>
+        <Navbar />
+        <div className="container mx-auto p-4 pt-20">
+          <Card className="p-6 text-center">
+            <p>Connect your wallet to view messages</p>
+          </Card>
+        </div>
+      </>
     );
   }
 
