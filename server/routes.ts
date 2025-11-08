@@ -193,6 +193,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get users who have paid for current user's content (legacy)
+  app.get('/api/users/paid-for-content', async (req, res) => {
+    try {
+      const user = await getCurrentUser(req);
+      if (!user) {
+        return res.status(401).json({ error: 'Unauthorized' });
+      }
+
+      const paidUsers = await storage.getUsersWhoPaidForContent(user.id);
+      res.json(paidUsers);
+    } catch (error: any) {
+      console.error('Get paid users error:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Get payment relationships (both directions)
+  app.get('/api/users/payment-relationships', async (req, res) => {
+    try {
+      const user = await getCurrentUser(req);
+      if (!user) {
+        return res.status(401).json({ error: 'Unauthorized' });
+      }
+
+      const relationships = await storage.getPaymentRelationshipsForUser(user.id);
+      res.json(relationships);
+    } catch (error: any) {
+      console.error('Get payment relationships error:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   // Get user profile by username
   app.get('/api/users/:username', async (req, res) => {
     try {
@@ -279,22 +311,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(result);
     } catch (error: any) {
       console.error('Follow error:', error);
-      res.status(500).json({ error: error.message });
-    }
-  });
-
-  // Get users who have paid for current user's content
-  app.get('/api/users/paid-for-content', async (req, res) => {
-    try {
-      const user = await getCurrentUser(req);
-      if (!user) {
-        return res.status(401).json({ error: 'Unauthorized' });
-      }
-
-      const paidUsers = await storage.getUsersWhoPaidForContent(user.id);
-      res.json(paidUsers);
-    } catch (error: any) {
-      console.error('Get paid users error:', error);
       res.status(500).json({ error: error.message });
     }
   });

@@ -11,7 +11,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ArrowLeft, Edit, Upload, User, Users, FileText, Lock, DollarSign, MessageCircle } from 'lucide-react';
-import { UserWithStats, PostWithCreator } from '@shared/schema';
+import { UserWithStats, PostWithCreator, User as UserType } from '@shared/schema';
 import { useWallet } from '@/lib/wallet';
 import { useToast } from '@/hooks/use-toast';
 import { apiRequest } from '@/lib/queryClient';
@@ -140,20 +140,22 @@ export default function Profile() {
   });
 
   // Check if current user has paid for this profile user's content
-  const { data: paidUsers = [] } = useQuery<{ id: string }[]>({
-    queryKey: ['paid-users', address],
+  const { data: paymentRelationships } = useQuery<{ patrons: UserType[]; creatorsPaid: UserType[] }>({
+    queryKey: ['payment-relationships', address],
     enabled: !!address && !isOwnProfile,
     queryFn: async () => {
       const walletAddress = (window as any).walletAddress || address;
-      const response = await fetch('/api/users/paid-for-content', {
+      const response = await fetch('/api/users/payment-relationships', {
         headers: walletAddress ? { 'x-wallet-address': walletAddress } : {},
       });
-      if (!response.ok) return [];
+      if (!response.ok) {
+        return { patrons: [], creatorsPaid: [] };
+      }
       return response.json();
     },
   });
 
-  const hasUnlockedProfile = paidUsers.some(user => user.id === profile?.id);
+  const hasUnlockedProfile = paymentRelationships?.creatorsPaid.some(user => user.id === profile?.id) || false;
 
   // Show all posts created by this user (including locked ones for visitors)
   const userPosts = allPosts?.filter(post => post.creatorId === profile?.id) || [];

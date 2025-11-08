@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useWallet } from '@/lib/wallet';
 import { Card } from '@/components/ui/card';
@@ -47,17 +47,27 @@ export default function Messages() {
   // -----------------------------
   // 2. Paid Users (users who paid for your content or you paid for their content)
   // -----------------------------
-  const { data: paidUsers = [] } = useQuery<UserType[]>({
-    queryKey: ['paid-users', currentUser?.id],
+  const { data: paymentRelationships } = useQuery<{ patrons: UserType[]; creatorsPaid: UserType[] }>({
+    queryKey: ['payment-relationships', currentUser?.id],
     enabled: !!currentUser?.id,
     queryFn: async () => {
-      const res = await fetch(`${API_URL}/api/users/paid-for-content`, {
+      const res = await fetch(`${API_URL}/api/users/payment-relationships`, {
         headers: { 'x-wallet-address': address || '' },
       });
-      if (!res.ok) return [];
-      return res.json() as Promise<UserType[]>;
+      if (!res.ok) return { patrons: [], creatorsPaid: [] };
+      return res.json();
     },
   });
+
+  // Combine patrons and creators, remove duplicates
+  const paidUsers = React.useMemo(() => {
+    if (!paymentRelationships) return [];
+    const combined = [...paymentRelationships.patrons, ...paymentRelationships.creatorsPaid];
+    const uniqueUsers = combined.filter((user, index, self) =>
+      index === self.findIndex((u) => u.id === user.id)
+    );
+    return uniqueUsers;
+  }, [paymentRelationships]);
 
   // Auto-select user from query param when paidUsers loads
   useEffect(() => {
