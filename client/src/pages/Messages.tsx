@@ -31,9 +31,7 @@ export default function Messages() {
   const queryParams = new URLSearchParams(location.split('?')[1] || '');
   const userIdFromQuery = queryParams.get('user');
 
-  // -----------------------------
-  // 1. Current User
-  // -----------------------------
+  // Current User
   const { data: currentUser } = useQuery<UserType>({
     queryKey: ['current-user', address],
     enabled: !!address,
@@ -48,9 +46,7 @@ export default function Messages() {
     },
   });
 
-  // -----------------------------
-  // 2. Paid Users (users who paid for your content or you paid for their content)
-  // -----------------------------
+  // Get users with payment relationships (can message them)
   const { data: paymentRelationships } = useQuery<{ patrons: UserType[]; creatorsPaid: UserType[] }>({
     queryKey: ['payment-relationships', currentUser?.id],
     enabled: !!currentUser?.id,
@@ -64,7 +60,7 @@ export default function Messages() {
   });
 
   // Combine patrons and creators, remove duplicates
-  const paidUsers = React.useMemo(() => {
+  const availableChats = React.useMemo(() => {
     if (!paymentRelationships) return [];
     const combined = [...paymentRelationships.patrons, ...paymentRelationships.creatorsPaid];
     const uniqueUsers = combined.filter((user, index, self) =>
@@ -73,9 +69,7 @@ export default function Messages() {
     return uniqueUsers;
   }, [paymentRelationships]);
 
-  // -----------------------------
-  // 3. Messages Query
-  // -----------------------------
+  // Messages with selected user
   const { data: messages = [] } = useQuery<DirectMessageWithUsers[]>({
     queryKey: ['messages', selectedUser?.id],
     enabled: !!selectedUser && !!address,
@@ -89,56 +83,45 @@ export default function Messages() {
     },
   });
 
-  // WebSocket integration for real-time messages
+  // WebSocket for real-time messages
   useWebSocket((message) => {
     if (message.type === 'newMessage' && message.payload) {
       const msg = message.payload as DirectMessageWithUsers;
       
-      // Invalidate messages query if this message is relevant to current conversation
       if (selectedUser && (msg.senderId === selectedUser.id || msg.receiverId === selectedUser.id)) {
         queryClient.invalidateQueries({ queryKey: ['messages', selectedUser.id] });
       }
       
-      // Always invalidate conversations to update unread counts
       queryClient.invalidateQueries({ queryKey: ['payment-relationships', currentUser?.id] });
     }
   });
 
-  // Auto-select user from query param when paidUsers loads
+  // Auto-select user from query param
   useEffect(() => {
-    if (userIdFromQuery && paidUsers.length > 0) {
-      const userToSelect = paidUsers.find(u => u.id === userIdFromQuery);
+    if (userIdFromQuery && availableChats.length > 0) {
+      const userToSelect = availableChats.find(u => u.id === userIdFromQuery);
       if (userToSelect && (!selectedUser || selectedUser.id !== userToSelect.id)) {
         console.log('Auto-selecting user from query:', userToSelect.username);
         setSelectedUser(userToSelect);
-        // Clear the query param after selecting
         const timer = setTimeout(() => {
           setLocation('/messages', { replace: true });
         }, 100);
         return () => clearTimeout(timer);
       }
     }
-  }, [userIdFromQuery, paidUsers, selectedUser, setLocation]);
+  }, [userIdFromQuery, availableChats, selectedUser, setLocation]);
 
-  // Auto-scroll to bottom when messages change
+  // Auto-scroll to bottom
   useEffect(() => {
     if (messages.length > 0 && messagesEndRef.current) {
       messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
     }
   }, [messages]);
 
-  // -----------------------------
-  // 4. Send Message
-  // -----------------------------
+  // Send message
   const sendMutation = useMutation({
     mutationFn: async (content: string) => {
       if (!selectedUser || !address) throw new Error('No recipient or wallet');
-
-      const payload = {
-        content: content.trim(),
-      };
-
-      console.log('[Send Debug] Sending message to:', selectedUser.id, 'content:', content);
 
       const res = await fetch(`${API_URL}/api/messages/${selectedUser.id}`, {
         method: 'POST',
@@ -146,13 +129,12 @@ export default function Messages() {
           'Content-Type': 'application/json',
           'x-wallet-address': address,
         },
-        body: JSON.stringify(payload),
+        body: JSON.stringify({ content: content.trim() }),
       });
 
       if (!res.ok) {
         const errorText = await res.text();
-        console.error('[Send Debug] Error Body:', errorText);
-        throw new Error(errorText || `HTTP ${res.status} - Check backend /api/messages`);
+        throw new Error(errorText || `HTTP ${res.status}`);
       }
 
       return res.json() as Promise<DirectMessageWithUsers>;
@@ -168,9 +150,7 @@ export default function Messages() {
     },
   });
 
-  // -----------------------------
-  // 5. Mark as Read
-  // -----------------------------
+  // Mark as read
   useEffect(() => {
     if (selectedUser && address) {
       fetch(`${API_URL}/api/messages/${selectedUser.id}/read`, {
@@ -180,9 +160,7 @@ export default function Messages() {
     }
   }, [selectedUser, address]);
 
-  // -----------------------------
-  // 6. No Wallet Guard
-  // -----------------------------
+  // No wallet guard
   if (!address) {
     return (
       <>
@@ -207,13 +185,13 @@ export default function Messages() {
         </Button>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 h-[calc(100vh-140px)]">
-          {/* Sidebar: Chats with Paid Users */}
+          {/* Sidebar: Available Chats */}
           <Card className={`${selectedUser ? 'hidden md:block' : ''} md:col-span-1 overflow-hidden flex flex-col`}>
             <div className="p-3 sm:p-4 border-b">
               <h2 className="font-semibold text-lg">Messages</h2>
             </div>
             <ScrollArea className="flex-1">
-              {paidUsers.length === 0 ? (
+              {availableChats.length === 0 ? (
                 <div className="p-4 sm:p-6 text-center">
                   <User className="w-12 h-12 mx-auto mb-3 opacity-30" />
                   <p className="text-sm text-muted-foreground font-medium">No chats available</p>
@@ -222,7 +200,7 @@ export default function Messages() {
                   </p>
                 </div>
               ) : (
-                paidUsers.map((user) => (
+                availableChats.map((user) => (
                   <div
                     key={user.id}
                     data-testid={`chat-user-${user.id}`}
