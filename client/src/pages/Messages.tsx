@@ -18,10 +18,14 @@ const API_URL = 'https://c762b603-597d-4da8-ba6b-42f2889fe9d1-00-3qi12bbre3n9x.p
 
 export default function Messages() {
   const { address } = useWallet();
-  const [, setLocation] = useLocation();
+  const [location, setLocation] = useLocation();
   const queryClient = useQueryClient();
   const [selectedUser, setSelectedUser] = useState<UserType | null>(null);
   const [input, setInput] = useState('');
+
+  // Parse query parameter to auto-select user
+  const queryParams = new URLSearchParams(location.split('?')[1] || '');
+  const userIdFromQuery = queryParams.get('user');
 
   // -----------------------------
   // 1. Current User
@@ -54,6 +58,18 @@ export default function Messages() {
       return res.json() as Promise<UserType[]>;
     },
   });
+
+  // Auto-select user from query param when paidUsers loads
+  useEffect(() => {
+    if (userIdFromQuery && paidUsers.length > 0 && !selectedUser) {
+      const userToSelect = paidUsers.find(u => u.id === userIdFromQuery);
+      if (userToSelect) {
+        setSelectedUser(userToSelect);
+        // Clear the query param after selecting
+        setLocation('/messages');
+      }
+    }
+  }, [userIdFromQuery, paidUsers, selectedUser, setLocation]);
 
   // -----------------------------
   // 4. Messages
