@@ -106,12 +106,16 @@ export default function Messages() {
 
   // Auto-select user from query param when paidUsers loads
   useEffect(() => {
-    if (userIdFromQuery && paidUsers.length > 0 && !selectedUser) {
+    if (userIdFromQuery && paidUsers.length > 0) {
       const userToSelect = paidUsers.find(u => u.id === userIdFromQuery);
-      if (userToSelect) {
+      if (userToSelect && (!selectedUser || selectedUser.id !== userToSelect.id)) {
+        console.log('Auto-selecting user from query:', userToSelect.username);
         setSelectedUser(userToSelect);
         // Clear the query param after selecting
-        setLocation('/messages');
+        const timer = setTimeout(() => {
+          setLocation('/messages', { replace: true });
+        }, 100);
+        return () => clearTimeout(timer);
       }
     }
   }, [userIdFromQuery, paidUsers, selectedUser, setLocation]);

@@ -216,7 +216,8 @@ export function PaymentModal({ isOpen, onClose, post, onSuccess, paymentType = '
     setShowMessagePrompt(false);
     onSuccess();
     onClose();
-    setLocation('/messages');
+    // Navigate to messages with the creator's user ID to auto-open chat
+    setLocation(`/messages?user=${post.creator.id}`);
   };
 
   const handleSkip = () => {
