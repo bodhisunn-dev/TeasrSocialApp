@@ -42,8 +42,16 @@ export default function Messages() {
     queryKey: ['current-user', address],
     enabled: !!address,
     queryFn: async () => {
-      const response = await apiRequest('POST', '/api/users/auth', { walletAddress: address });
-      return response.json() as Promise<UserType>;
+      const authResponse = await apiRequest('POST', '/api/users/auth', { walletAddress: address });
+      const authData = await authResponse.json() as UserType;
+      
+      // Fetch full user profile to get profileImagePath
+      const profileResponse = await fetch(`/api/users/${authData.username}`, {
+        headers: { 'x-wallet-address': address || '' },
+      });
+      if (!profileResponse.ok) return authData;
+      
+      return profileResponse.json() as Promise<UserType>;
     },
   });
 
