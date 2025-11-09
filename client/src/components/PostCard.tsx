@@ -10,7 +10,7 @@ import { PaymentModal } from './PaymentModal';
 import { Comments } from './Comments';
 import { useWallet } from '@/lib/wallet';
 import { useWebSocket } from '@/lib/useWebSocket';
-import { Link } from 'wouter';
+import { Link, useLocation } from 'wouter';
 import { useQuery } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -27,6 +27,7 @@ interface PostCardProps {
 export function PostCard({ post, onVote, onPaymentSuccess }: PostCardProps) {
   const { toast } = useToast();
   const { address } = useWallet();
+  const [, setLocation] = useLocation();
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [paymentType, setPaymentType] = useState<'content' | 'comment'>('content');
   const [showComments, setShowComments] = useState(false);
@@ -38,7 +39,6 @@ export function PostCard({ post, onVote, onPaymentSuccess }: PostCardProps) {
   const [localUpvoteCount, setLocalUpvoteCount] = useState(post.upvoteCount);
   const [localDownvoteCount, setLocalDownvoteCount] = useState(post.downvoteCount);
   const [investorCount, setInvestorCount] = useState(post.investorCount || 0);
-
 
   // Fetch buyout count to check limit
   useEffect(() => {
@@ -191,18 +191,31 @@ export function PostCard({ post, onVote, onPaymentSuccess }: PostCardProps) {
               </p>
             </Link>
           </div>
-          {post.isViral && (
-            <Badge className="bg-gradient-to-r from-orange-500 to-red-500 text-white">
-              <TrendingUp className="w-3 h-3 mr-1" />
-              Viral
-            </Badge>
-          )}
-          {post.hasUserPaid && post.buyoutPrice && (
-            <Badge className="bg-gradient-to-r from-purple-600 to-pink-600 text-white">
-              <DollarSign className="w-3 h-3 mr-1" />
-              Owned
-            </Badge>
-          )}
+          <div className="flex items-center gap-2">
+            {post.isViral && (
+              <Badge className="bg-gradient-to-r from-orange-500 to-red-500 text-white">
+                <TrendingUp className="w-3 h-3 mr-1" />
+                Viral
+              </Badge>
+            )}
+            {post.hasUserPaid && post.buyoutPrice && (
+              <Badge className="bg-gradient-to-r from-purple-600 to-pink-600 text-white">
+                <DollarSign className="w-3 h-3 mr-1" />
+                Owned
+              </Badge>
+            )}
+            {isPaid && !isCreator && address && (
+              <Button
+                onClick={() => setLocation(`/messages?user=${post.creator.id}`)}
+                size="sm"
+                variant="ghost"
+                className="h-7 px-2"
+                data-testid={`button-message-creator-${post.id}`}
+              >
+                <MessageCircle className="w-4 h-4" />
+              </Button>
+            )}
+          </div>
         </div>
 
         {/* Media Container */}

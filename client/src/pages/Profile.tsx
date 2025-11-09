@@ -139,7 +139,7 @@ export default function Profile() {
     },
   });
 
-  // Check if current user has paid for this profile user's content
+  // Check if current user has paid for this profile user's content OR vice versa
   const { data: paymentRelationships } = useQuery<{ patrons: UserType[]; creatorsPaid: UserType[] }>({
     queryKey: ['payment-relationships', address],
     enabled: !!address && !isOwnProfile,
@@ -155,7 +155,10 @@ export default function Profile() {
     },
   });
 
-  const hasUnlockedProfile = paymentRelationships?.creatorsPaid.some(user => user.id === profile?.id) || false;
+  // Bidirectional messaging: show button if EITHER you paid for their content OR they paid for yours
+  const hasMessagingAccess = 
+    (paymentRelationships?.creatorsPaid?.some(user => user.id === profile?.id) ?? false) || 
+    (paymentRelationships?.patrons?.some(user => user.id === profile?.id) ?? false);
 
   // Show all posts created by this user (including locked ones for visitors)
   const userPosts = allPosts?.filter(post => post.creatorId === profile?.id) || [];
@@ -344,7 +347,7 @@ export default function Profile() {
                     >
                       {profile.isFollowing ? 'Unfollow' : 'Follow'}
                     </Button>
-                    {hasUnlockedProfile && (
+                    {hasMessagingAccess && (
                       <Button 
                         onClick={() => setLocation(`/messages?user=${profile.id}`)} 
                         variant="outline"
