@@ -155,27 +155,82 @@ export default function Feed() {
           {/* Header */}
           <div className="text-center mb-12">
             <motion.h1 
-              className="text-4xl sm:text-5xl font-bold font-display mb-4 bg-gradient-to-r from-primary via-purple-600 to-pink-600 bg-clip-text text-transparent"
+              className="text-4xl sm:text-5xl font-bold font-display mb-4"
               initial={{ opacity: 0, y: -20 }}
               animate={{ 
                 opacity: 1, 
                 y: 0,
-                backgroundPosition: ['0% 50%', '100% 50%', '0% 50%']
               }}
               transition={{ 
                 opacity: { duration: 0.6 },
-                y: { duration: 0.6 },
-                backgroundPosition: { 
-                  duration: 5,
-                  repeat: Infinity,
-                  ease: "linear"
-                }
-              }}
-              style={{
-                backgroundSize: '200% 200%'
+                y: { duration: 0.6 }
               }}
             >
-              GET PAID TO POST
+              {['GET', 'PAID', 'TO', 'POST'].map((word, wordIndex) => (
+                <motion.span
+                  key={wordIndex}
+                  className="inline-block bg-gradient-to-r from-primary via-purple-600 to-pink-600 bg-clip-text text-transparent mr-3"
+                  initial={{ opacity: 0, y: 20, scale: 0.8 }}
+                  animate={{ 
+                    opacity: 1, 
+                    y: [0, -5, 0],
+                    scale: [1, 1.05, 1],
+                    backgroundPosition: ['0% 50%', '100% 50%', '0% 50%']
+                  }}
+                  transition={{
+                    opacity: { duration: 0.3, delay: wordIndex * 0.1 },
+                    y: { 
+                      duration: 2,
+                      repeat: Infinity,
+                      delay: wordIndex * 0.2,
+                      ease: "easeInOut"
+                    },
+                    scale: { 
+                      duration: 2,
+                      repeat: Infinity,
+                      delay: wordIndex * 0.2,
+                      ease: "easeInOut"
+                    },
+                    backgroundPosition: {
+                      duration: 3,
+                      repeat: Infinity,
+                      ease: "linear"
+                    }
+                  }}
+                  style={{
+                    backgroundSize: '200% 200%'
+                  }}
+                  whileHover={{
+                    scale: 1.1,
+                    rotate: [-1, 1, -1],
+                    transition: { duration: 0.3 }
+                  }}
+                >
+                  {word.split('').map((letter, letterIndex) => (
+                    <motion.span
+                      key={letterIndex}
+                      className="inline-block"
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ 
+                        opacity: 1, 
+                        y: 0,
+                      }}
+                      transition={{
+                        duration: 0.3,
+                        delay: wordIndex * 0.1 + letterIndex * 0.05
+                      }}
+                      whileHover={{
+                        y: -8,
+                        scale: 1.2,
+                        color: '#ec4899',
+                        transition: { duration: 0.2 }
+                      }}
+                    >
+                      {letter}
+                    </motion.span>
+                  ))}
+                </motion.span>
+              ))}
             </motion.h1>
             <motion.p 
               className="text-lg text-muted-foreground max-w-2xl mx-auto"
