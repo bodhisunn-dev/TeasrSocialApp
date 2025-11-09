@@ -11,6 +11,7 @@ import { useWallet } from '@/lib/wallet';
 import { useWebSocket } from '@/lib/useWebSocket';
 import { apiRequest } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
+import { motion } from 'framer-motion';
 
 export default function Feed() {
   const [showUploadModal, setShowUploadModal] = useState(false);
@@ -153,12 +154,119 @@ export default function Feed() {
         <div className="max-w-7xl mx-auto">
           {/* Header */}
           <div className="text-center mb-12">
-            <h1 className="text-4xl sm:text-5xl font-bold font-display mb-4 bg-gradient-to-r from-primary via-purple-600 to-pink-600 bg-clip-text text-transparent">
-              GET PAID TO POST
-            </h1>
-            <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-              Token Gate your Content & Earn with x402 Protocol
-            </p>
+            <motion.h1 
+              className="text-4xl sm:text-5xl font-bold font-display mb-4"
+              initial={{ opacity: 0, y: -20 }}
+              animate={{ 
+                opacity: 1, 
+                y: 0,
+              }}
+              transition={{ 
+                opacity: { duration: 0.6 },
+                y: { duration: 0.6 }
+              }}
+            >
+              {['GET', 'PAID', 'TO', 'POST'].map((word, wordIndex) => (
+                <motion.span
+                  key={wordIndex}
+                  className="inline-block bg-gradient-to-r from-primary via-purple-600 to-pink-600 bg-clip-text text-transparent mr-3"
+                  initial={{ opacity: 0, y: 20, scale: 0.8 }}
+                  animate={{ 
+                    opacity: 1, 
+                    y: [0, -5, 0],
+                    scale: [1, 1.05, 1],
+                    backgroundPosition: ['0% 50%', '100% 50%', '0% 50%']
+                  }}
+                  transition={{
+                    opacity: { duration: 0.3, delay: wordIndex * 0.1 },
+                    y: { 
+                      duration: 2,
+                      repeat: Infinity,
+                      delay: wordIndex * 0.2,
+                      ease: "easeInOut"
+                    },
+                    scale: { 
+                      duration: 2,
+                      repeat: Infinity,
+                      delay: wordIndex * 0.2,
+                      ease: "easeInOut"
+                    },
+                    backgroundPosition: {
+                      duration: 3,
+                      repeat: Infinity,
+                      ease: "linear"
+                    }
+                  }}
+                  style={{
+                    backgroundSize: '200% 200%'
+                  }}
+                  whileHover={{
+                    scale: 1.1,
+                    rotate: [-1, 1, -1],
+                    transition: { duration: 0.3 }
+                  }}
+                >
+                  {word.split('').map((letter, letterIndex) => (
+                    <motion.span
+                      key={letterIndex}
+                      className="inline-block"
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ 
+                        opacity: 1, 
+                        y: 0,
+                      }}
+                      transition={{
+                        duration: 0.3,
+                        delay: wordIndex * 0.1 + letterIndex * 0.05
+                      }}
+                      whileHover={{
+                        y: -8,
+                        scale: 1.2,
+                        color: '#ec4899',
+                        transition: { duration: 0.2 }
+                      }}
+                    >
+                      {letter}
+                    </motion.span>
+                  ))}
+                </motion.span>
+              ))}
+            </motion.h1>
+            <motion.p 
+              className="text-lg text-muted-foreground max-w-2xl mx-auto"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 0.2 }}
+            >
+              <motion.span
+                className="inline-block"
+                animate={{ 
+                  scale: [1, 1.05, 1],
+                }}
+                transition={{ 
+                  duration: 2,
+                  repeat: Infinity,
+                  ease: "easeInOut"
+                }}
+              >
+                Token Gate your Content
+              </motion.span>
+              {' & Earn with '}
+              <motion.span
+                className="inline-block font-semibold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent"
+                animate={{ 
+                  opacity: [0.7, 1, 0.7],
+                }}
+                transition={{ 
+                  duration: 2,
+                  repeat: Infinity,
+                  ease: "easeInOut",
+                  delay: 1
+                }}
+              >
+                x402 Protocol
+              </motion.span>
+            </motion.p>
           </div>
 
           {/* Connect Wallet CTA */}
