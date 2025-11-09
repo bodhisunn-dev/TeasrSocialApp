@@ -11,6 +11,7 @@ import { useWallet } from '@/lib/wallet';
 import { useWebSocket } from '@/lib/useWebSocket';
 import { apiRequest } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
+import { motion } from 'framer-motion';
 
 export default function Feed() {
   const [showUploadModal, setShowUploadModal] = useState(false);
