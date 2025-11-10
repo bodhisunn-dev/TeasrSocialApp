@@ -1193,7 +1193,7 @@ export class DatabaseStorage implements IStorage {
     const PLATFORM_FEE_USDC = 0.05;
 
     // Get all payments for this user's posts (content unlocks only)
-    const payments = await db
+    const userPayments = await db
       .select({ 
         amount: payments.amount,
         postId: payments.postId,
@@ -1209,7 +1209,7 @@ export class DatabaseStorage implements IStorage {
     let totalRevenue = 0;
 
     // Process each payment
-    for (const payment of payments) {
+    for (const payment of userPayments) {
       const paymentAmount = parseFloat(payment.amount);
 
       // Get post details to check investor settings
