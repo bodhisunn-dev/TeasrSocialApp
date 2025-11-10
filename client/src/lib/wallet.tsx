@@ -5,6 +5,12 @@ import { useToast } from '@/hooks/use-toast';
 // Prevent Buffer polyfill issues in browser
 if (typeof window !== 'undefined') {
   (window as any).Buffer = undefined;
+  (window as any).global = window;
+  (window as any).process = undefined;
+  
+  // Detect mobile browser
+  const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+  (window as any).isMobileBrowser = isMobile;
 }
 
 type WalletType = 'metamask' | 'coinbase' | 'phantom' | null;
@@ -92,12 +98,31 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     const win = window as any;
 
     if (type === 'phantom') {
-      if (win.phantom?.ethereum) return win.phantom.ethereum;
-      if (win.solana?.isPhantom) return win.solana;
-      if (win.ethereum?.providers) {
-        const phantom = win.ethereum.providers.find((p: any) => p.isPhantom);
+      const isMobile = (window as any).isMobileBrowser;
+      
+      // For mobile, try direct ethereum object first (in-app browser)
+      if (isMobile && win.ethereum?.isPhantom) {
+        return win.ethereum;
+      }
+      
+      // Desktop: Check for Phantom's explicit provider
+      if (win.phantom?.ethereum) {
+        return win.phantom.ethereum;
+      }
+      
+      // Check in providers array (multi-wallet scenario)
+      if (win.ethereum?.providers && Array.isArray(win.ethereum.providers)) {
+        const phantom = win.ethereum.providers.find((p: any) => 
+          p.isPhantom && !p.isCoinbaseWallet && !p.isMetaMask
+        );
         if (phantom) return phantom;
       }
+      
+      // Final fallback: check if default ethereum is Phantom
+      if (win.ethereum?.isPhantom && !win.ethereum?.isCoinbaseWallet && !win.ethereum?.isMetaMask) {
+        return win.ethereum;
+      }
+      
       return null;
     }
 
@@ -153,8 +178,29 @@ export function WalletProvider({ children }: { children: ReactNode }) {
 
     setIsConnecting(true);
     try {
-      const ethersProvider = new ethers.providers.Web3Provider(provider);
-      await ethersProvider.send('eth_requestAccounts', []);
+      const isMobile = (window as any).isMobileBrowser;
+      
+      // Clean up existing listeners for mobile
+      if (isMobile && provider.removeAllListeners) {
+        try {
+          provider.removeAllListeners();
+        } catch (e) {
+          console.warn('Could not remove listeners:', e);
+        }
+      }
+      
+      // Create provider with explicit network setting
+      const ethersProvider = new ethers.providers.Web3Provider(provider, 'any');
+      
+      // Request accounts with appropriate timeout
+      const timeoutMs = isMobile ? 60000 : 30000; // Longer timeout for mobile
+      const accountsPromise = ethersProvider.send('eth_requestAccounts', []);
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Connection timeout - please try again')), timeoutMs)
+      );
+      
+      await Promise.race([accountsPromise, timeoutPromise]);
+      
       const signer = ethersProvider.getSigner();
       const address = await signer.getAddress();
 
@@ -194,9 +240,23 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       });
     } catch (error: any) {
       console.error('Wallet connection error:', error);
+      
+      let errorMessage = error.message || 'Please try again';
+      
+      // Provide specific guidance for common mobile wallet issues
+      if (walletType === 'phantom') {
+        if (error.message?.includes('timeout') || error.message?.includes('Connection')) {
+          errorMessage = 'Connection timeout. Please ensure Phantom app is updated and try again.';
+        } else if (error.message?.includes('User rejected')) {
+          errorMessage = 'Connection rejected. Please approve in Phantom app.';
+        } else if (error.message?.includes('Buffer')) {
+          errorMessage = 'Compatibility issue detected. Please update Phantom app or try desktop.';
+        }
+      }
+      
       toast({
         title: 'Connection failed',
-        description: error.message || 'Please try again',
+        description: errorMessage,
         variant: 'destructive',
       });
     } finally {

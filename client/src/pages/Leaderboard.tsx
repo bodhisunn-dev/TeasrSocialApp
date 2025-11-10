@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Navbar } from '@/components/Navbar';
+import { ViralPostBanner } from '@/components/ViralPostBanner';
 import { Card } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
@@ -13,13 +14,30 @@ import { Skeleton } from '@/components/ui/skeleton';
 type LeaderboardType = 'creators' | 'posts';
 
 function ViralPostCard({ post }: { post: PostWithCreator }) {
-  const [revenue, setRevenue] = useState<string>('0');
+  const [revenue, setRevenue] = useState<string>('0.00');
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch(`/api/posts/${post.id}/revenue`)
-      .then(res => res.json())
-      .then(data => setRevenue(data.revenue))
-      .catch(err => console.error('Error fetching revenue:', err));
+    const fetchRevenue = async () => {
+      try {
+        const response = await fetch(`/api/posts/${post.id}/revenue?t=${Date.now()}`);
+        if (!response.ok) {
+          throw new Error('Failed to fetch revenue');
+        }
+        const data = await response.json();
+        setRevenue(data.revenue || '0.00');
+      } catch (err) {
+        console.error('Error fetching revenue for post', post.id, err);
+        setRevenue('0.00');
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    fetchRevenue();
+    // Refetch every 10 seconds to get updated revenue
+    const interval = setInterval(fetchRevenue, 10000);
+    return () => clearInterval(interval);
   }, [post.id]);
 
   return (
@@ -39,7 +57,7 @@ function ViralPostCard({ post }: { post: PostWithCreator }) {
         <div className="absolute bottom-2 left-2">
           <Badge className="bg-green-600 text-white">
             <DollarSign className="w-3 h-3 mr-1" />
-            ${parseFloat(revenue).toFixed(2)}
+            {loading ? '...' : `$${parseFloat(revenue).toFixed(2)}`}
           </Badge>
         </div>
       </div>
@@ -119,8 +137,11 @@ export default function Leaderboard() {
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
+      <div className="pt-16">
+        <ViralPostBanner />
+      </div>
 
-      <main className="pt-20 pb-12 px-4 sm:px-6 lg:px-8">
+      <main className="pt-4 pb-12 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto">
           {/* Header */}
           <div className="text-center mb-12">
