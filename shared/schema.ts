@@ -25,6 +25,7 @@ export const posts = pgTable("posts", {
   encryptedMediaPath: text("encrypted_media_path").notNull(),
   blurredThumbnailPath: text("blurred_thumbnail_path").notNull(),
   mediaType: text("media_type").notNull(), // 'image' or 'video'
+  mimeType: text("mime_type").notNull(), // Original MIME type: image/gif, image/png, video/mp4, etc.
 
   // Encryption - symmetric key encrypted with master key, IV, and auth tag
   encryptedKey: text("encrypted_key").notNull(),
@@ -426,6 +427,7 @@ export const insertPostSchema = createInsertSchema(posts).pick({
   encryptedMediaPath: true,
   blurredThumbnailPath: true,
   mediaType: true,
+  mimeType: true,
   encryptedKey: true,
   iv: true,
   authTag: true,

@@ -378,6 +378,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         encryptedMediaPath: encryptedFilename,
         blurredThumbnailPath: `/uploads/${thumbnailPath}`,
         mediaType: req.file.mimetype.startsWith('image/') ? 'image' : 'video',
+        mimeType: req.file.mimetype, // Store original MIME type for HD quality
         encryptedKey: encryptedKeyData.encryptedKey,
         iv: encryptedKeyData.iv,
         authTag: encryptedKeyData.authTag,
@@ -573,11 +574,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const fileAuthTag = encryptedBuffer.slice(-16);
         const fileEncryptedData = encryptedBuffer.slice(12, -16);
         const decryptedBuffer = decryptBuffer(fileEncryptedData, contentKey, fileIv, fileAuthTag);
-        const mimeType = post.mediaType === 'image' ? 'image/jpeg' : 'video/mp4';
+        const mimeType = post.mimeType || (post.mediaType === 'image' ? 'image/jpeg' : 'video/mp4'); // Use original MIME type for HD quality
         res.set('Content-Type', mimeType);
         res.set('Cache-Control', 'private, max-age=3600');
         res.set('Content-Length', decryptedBuffer.length.toString());
-        console.log(`[MEDIA] Successfully decrypted and serving content, size: ${decryptedBuffer.length} bytes`);
+        console.log(`[MEDIA] Successfully decrypted and serving content (${mimeType}), size: ${decryptedBuffer.length} bytes`);
         res.send(decryptedBuffer);
       } catch (decryptError) {
         console.error('[MEDIA] Decryption error:', decryptError);
