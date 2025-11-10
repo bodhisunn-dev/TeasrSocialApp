@@ -31,7 +31,7 @@ function ViralPostCard({ post, index }: { post: PostWithCreator; index: number }
   }, [post.id]);
 
   return (
-    <Link key={`${post.id}-${index}`} href={`/`}>
+    <Link key={`${post.id}-${index}`} href={`/post/${post.id}`}>
       <div className="flex items-center gap-2 px-4 py-1 bg-background/50 backdrop-blur-sm rounded-full border border-orange-500/30 hover:border-orange-500/60 transition-colors cursor-pointer whitespace-nowrap min-w-max">
         <TrendingUp className="w-4 h-4 text-orange-500" />
         <span className="text-sm font-medium">
