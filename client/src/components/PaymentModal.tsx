@@ -75,14 +75,10 @@ export function PaymentModal({ isOpen, onClose, post, onSuccess, paymentType = '
   const convertedBuyoutPrice = post.buyoutPrice ? getConvertedPrice(post.buyoutPrice) : null;
 
   const handlePayment = async () => {
-    // This part of the code is not present in the provided changes.
-    // Assuming the original code had checks for selectedCrypto and selectedNetwork.
-    // For the sake of generating a complete file, I'll add a placeholder for these.
-    const selectedNetwork = 'base-sepolia'; // Placeholder, as this was not in original or changes
-    const address = (window as any).walletAddress; // Placeholder, as this was not in original or changes
-    const paymentAmount = '0'; // Placeholder
-    const canBuyout = true; // Placeholder
-
+    const selectedNetwork = 'base-sepolia';
+    const address = (window as any).walletAddress;
+    const paymentAmount = convertedPrice.toString(); // Use calculated price!
+    const canBuyout = !isBuyoutFull; // Can buyout if investor spots not full
 
     if (!selectedCrypto || !selectedNetwork) {
       toast({
