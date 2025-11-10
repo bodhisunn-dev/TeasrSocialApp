@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Navbar } from '@/components/Navbar';
+import { ViralPostBanner } from '@/components/ViralPostBanner';
 import { Card } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
@@ -19,7 +20,7 @@ function ViralPostCard({ post }: { post: PostWithCreator }) {
   useEffect(() => {
     const fetchRevenue = async () => {
       try {
-        const response = await fetch(`/api/posts/${post.id}/revenue`);
+        const response = await fetch(`/api/posts/${post.id}/revenue?t=${Date.now()}`);
         if (!response.ok) {
           throw new Error('Failed to fetch revenue');
         }
@@ -34,6 +35,9 @@ function ViralPostCard({ post }: { post: PostWithCreator }) {
     };
     
     fetchRevenue();
+    // Refetch every 10 seconds to get updated revenue
+    const interval = setInterval(fetchRevenue, 10000);
+    return () => clearInterval(interval);
   }, [post.id]);
 
   return (
@@ -133,8 +137,11 @@ export default function Leaderboard() {
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
+      <div className="pt-16">
+        <ViralPostBanner />
+      </div>
 
-      <main className="pt-20 pb-12 px-4 sm:px-6 lg:px-8">
+      <main className="pt-4 pb-12 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto">
           {/* Header */}
           <div className="text-center mb-12">

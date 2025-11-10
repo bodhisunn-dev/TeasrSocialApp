@@ -100,10 +100,11 @@ export function PostCard({ post, onVote, onPaymentSuccess }: PostCardProps) {
 
   // Add wallet address to media URL for authentication
   const getMediaUrl = () => {
-    if (!isPaid) return post.blurredThumbnailPath;
+    if (!isPaid) return `${post.blurredThumbnailPath}?t=${Date.now()}`;
     const walletAddress = localStorage.getItem('walletAddress') || (window as any).walletAddress;
     const url = new URL(`/api/posts/${post.id}/media`, window.location.origin);
     url.searchParams.set('t', imageKey.toString());
+    url.searchParams.set('r', Date.now().toString()); // Force refresh
     if (walletAddress) {
       url.searchParams.set('wallet', walletAddress);
     }

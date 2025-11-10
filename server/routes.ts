@@ -661,10 +661,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.error('Error incrementing view count:', err)
       );
 
-      // Check if cryptocurrency is accepted
-      const acceptedCryptos = post.acceptedCryptos.split(',');
-      if (!acceptedCryptos.includes(cryptocurrency)) {
-        return res.status(400).json({ error: `${cryptocurrency} is not accepted for this content` });
+      // Check if cryptocurrency is accepted (normalize both sides)
+      const acceptedCryptos = post.acceptedCryptos.split(',').map(c => c.trim().toUpperCase());
+      const normalizedCrypto = (cryptocurrency || 'USDC').toUpperCase().trim();
+      
+      if (!acceptedCryptos.includes(normalizedCrypto)) {
+        console.log(`Payment rejected - ${normalizedCrypto} not in accepted list: ${acceptedCryptos.join(', ')}`);
+        return res.status(400).json({ error: `${normalizedCrypto} is not accepted for this content. Accepted: ${post.acceptedCryptos}` });
       }
 
       // Check if already paid
@@ -674,19 +677,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.json({ success: true, alreadyPaid: true });
       }
 
-      // Validate network for cryptocurrency
+      // Validate network for cryptocurrency (more permissive)
       const isProduction = process.env.NODE_ENV === 'production';
       const validNetworks: Record<string, string[]> = {
-        'USDC': isProduction ? ['base-mainnet'] : ['base-sepolia', 'ethereum-sepolia', 'polygon-mumbai'],
+        'USDC': isProduction ? ['base-mainnet', 'ethereum-mainnet', 'polygon-mainnet'] : ['base-sepolia', 'ethereum-sepolia', 'polygon-mumbai'],
         'SOL': isProduction ? ['solana-mainnet'] : ['solana-devnet'],
-        'ETH': isProduction ? ['ethereum-mainnet'] : ['ethereum-sepolia'],
+        'ETH': isProduction ? ['ethereum-mainnet', 'base-mainnet'] : ['ethereum-sepolia', 'base-sepolia'],
         'MATIC': isProduction ? ['polygon-mainnet'] : ['polygon-mumbai'],
         'BNB': isProduction ? ['bsc-mainnet'] : ['bsc-testnet'],
       };
 
       const selectedNetwork = network || (isProduction ? 'base-mainnet' : 'base-sepolia');
-      if (cryptocurrency && validNetworks[cryptocurrency] && !validNetworks[cryptocurrency].includes(selectedNetwork)) {
-        return res.status(400).json({ error: `Invalid network ${selectedNetwork} for ${cryptocurrency}` });
+      console.log(`Payment validation - crypto: ${normalizedCrypto}, network: ${selectedNetwork}, valid: ${validNetworks[normalizedCrypto]?.join(', ')}`);
+      
+      if (validNetworks[normalizedCrypto] && !validNetworks[normalizedCrypto].includes(selectedNetwork)) {
+        console.log(`Network validation failed for ${normalizedCrypto} on ${selectedNetwork}`);
+        return res.status(400).json({ error: `Invalid network ${selectedNetwork} for ${normalizedCrypto}. Valid networks: ${validNetworks[normalizedCrypto].join(', ')}` });
       }
 
       // Check investor limit (use post's maxInvestors setting)

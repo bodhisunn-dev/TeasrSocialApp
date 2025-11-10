@@ -4,6 +4,7 @@ import { PostCard } from '@/components/PostCard';
 import { UploadModal } from '@/components/UploadModal';
 import { PaymentModal } from '@/components/PaymentModal';
 import { Navbar } from '@/components/Navbar';
+import { ViralPostBanner } from '@/components/ViralPostBanner';
 import { Button } from '@/components/ui/button';
 import { Loader2, Upload } from 'lucide-react';
 import { PostWithCreator } from '@shared/schema';
@@ -24,7 +25,7 @@ export default function Feed() {
     queryKey: ['/api/posts', address],
     queryFn: async () => {
       const walletAddress = (window as any).walletAddress || address;
-      const response = await fetch('/api/posts', {
+      const response = await fetch(`/api/posts?t=${Date.now()}`, {
         headers: walletAddress ? { 'x-wallet-address': walletAddress } : {},
       });
       if (!response.ok) {
@@ -34,6 +35,7 @@ export default function Feed() {
     },
     refetchOnWindowFocus: true,
     refetchOnMount: true,
+    staleTime: 0,
   });
 
   // WebSocket for live vote and view updates
@@ -148,9 +150,12 @@ export default function Feed() {
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
+      <div className="pt-16">
+        <ViralPostBanner />
+      </div>
 
       {/* Main Content */}
-      <main className="pt-20 pb-12 px-4 sm:px-6 lg:px-8">
+      <main className="pt-4 pb-12 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto">
           {/* Header */}
           <div className="text-center mb-12">
