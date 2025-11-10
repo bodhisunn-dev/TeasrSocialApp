@@ -12,12 +12,14 @@ if (!process.env.DATABASE_URL) {
   );
 }
 
-export const pool = new Pool({ 
-  connectionString: process.env.DATABASE_URL,
-  max: 10,
-  idleTimeoutMillis: 30000,
-  connectionTimeoutMillis: 10000,
-});
+// Log which database is being used (for debugging)
+console.log(`[DB] Connecting to database:`, 
+  process.env.DATABASE_URL ? 
+  `${process.env.DATABASE_URL.split('@')[1]?.split('/')[0]} (${process.env.NODE_ENV || 'development'})` : 
+  'No connection string'
+);
+
+const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 
 // Handle pool errors
 pool.on('error', (err) => {
