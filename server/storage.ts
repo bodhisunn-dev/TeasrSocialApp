@@ -351,28 +351,37 @@ export class DatabaseStorage implements IStorage {
 
   // Payments
   async createPayment(insertPayment: InsertPayment): Promise<Payment> {
-    const [payment] = await withRetry(() =>
-      db
-        .insert(payments)
-        .values(insertPayment)
-        .returning()
-    );
+    try {
+      console.log(`[STORAGE] createPayment called with data:`, insertPayment);
+      
+      const [payment] = await withRetry(() =>
+        db
+          .insert(payments)
+          .values(insertPayment)
+          .returning()
+      );
 
-    // Automatically add the creator to the payer's paid user list in direct messages
-    // This assumes that a direct message conversation might be initiated or updated here.
-    // The actual logic for "paid user list" might be a separate concept or integrated into DM.
-    // For now, we'll ensure a message can be sent/retrieved between them.
-    const post = await this.getPost(insertPayment.postId);
-    if (post && post.creatorId !== insertPayment.userId) {
-      // Ensure there's a way to communicate or acknowledge this payment for DM context
-      // This could involve creating a dummy message or updating a status if a 'paid user list'
-      // is a distinct feature. For now, we'll ensure the user can be found.
-      await this.getUserById(post.creatorId); // Ensure creator exists
-      await this.getUserById(insertPayment.userId); // Ensure payer exists
+      console.log(`[STORAGE SUCCESS] Payment inserted into database - id: ${payment.id}`);
+
+      // Automatically add the creator to the payer's paid user list in direct messages
+      // This assumes that a direct message conversation might be initiated or updated here.
+      // The actual logic for "paid user list" might be a separate concept or integrated into DM.
+      // For now, we'll ensure a message can be sent/retrieved between them.
+      const post = await this.getPost(insertPayment.postId);
+      if (post && post.creatorId !== insertPayment.userId) {
+        // Ensure there's a way to communicate or acknowledge this payment for DM context
+        // This could involve creating a dummy message or updating a status if a 'paid user list'
+        // is a distinct feature. For now, we'll ensure the user can be found.
+        await this.getUserById(post.creatorId); // Ensure creator exists
+        await this.getUserById(insertPayment.userId); // Ensure payer exists
+      }
+
+      return payment;
+    } catch (error) {
+      console.error(`[STORAGE ERROR] Failed to create payment:`, error);
+      console.error(`[STORAGE ERROR] Payment data that failed:`, insertPayment);
+      throw error;
     }
-
-
-    return payment;
   }
 
   async hasUserPaid(userId: string, postId: string, paymentType: 'content' | 'comment'): Promise<boolean> {
