@@ -1,0 +1,112 @@
+2025-11-09 19:37:53.60
+cafde262
+User
+[AUTH] FINAL ERROR: Invalid URL TypeError: Invalid URL
+2025-11-09 19:37:53.60
+cafde262
+User
+at new URL (node:internal/url:806:29)
+2025-11-09 19:37:53.60
+cafde262
+User
+at Object.parse (file:///home/runner/workspace/node_modules/@neondatabase/serverless/index.mjs:841:225)
+2025-11-09 19:37:53.60
+cafde262
+User
+at parse (file:///home/runner/workspace/node_modules/@neondatabase/serverless/index.mjs:848:1)
+2025-11-09 19:37:53.60
+cafde262
+User
+at new ConnectionParameters (file:///home/runner/workspace/node_modules/@neondatabase/serverless/index.mjs:869:23)
+2025-11-09 19:37:53.60
+cafde262
+User
+at new Client (file:///home/runner/workspace/node_modules/@neondatabase/serverless/index.mjs:1226:35)
+2025-11-09 19:37:53.60
+cafde262
+User
+at new NeonClient (file:///home/runner/workspace/node_modules/@neondatabase/serverless/index.mjs:1570:121)
+2025-11-09 19:37:53.60
+cafde262
+User
+at Cn.newClient (file:///home/runner/workspace/node_modules/@neondatabase/serverless/index.mjs:1378:74)
+2025-11-09 19:37:53.60
+cafde262
+User
+at Cn.connect (file:///home/runner/workspace/node_modules/@neondatabase/serverless/index.mjs:1378:23)
+2025-11-09 19:37:53.60
+cafde262
+User
+at Cn.query (file:///home/runner/workspace/node_modules/@neondatabase/serverless/index.mjs:1407:63)
+2025-11-09 19:37:53.60
+cafde262
+User
+at Cn.query (file:///home/runner/workspace/node_modules/@neondatabase/serverless/index.mjs:1623:14)
+2025-11-09 19:37:53.60
+cafde262
+User
+12:37:53 AM [express] POST /api/users/auth 500 in 1ms :: {"error":"Invalid URL"}
+2025-11-09 19:37:53.61
+cafde262
+User
+at Object.parse (file:///home/runner/workspace/node_modules/@neondatabase/serverless/index.mjs:841:225)
+2025-11-09 19:37:53.61
+cafde262
+User
+at parse (file:///home/runner/workspace/node_modules/@neondatabase/serverless/index.mjs:848:1)
+2025-11-09 19:37:53.61
+cafde262
+User
+at new Client (file:///home/runner/workspace/node_modules/@neondatabase/serverless/index.mjs:1226:35)
+2025-11-09 19:37:53.61
+cafde262
+User
+at Cn.connect (file:///home/runner/workspace/node_modules/@neondatabase/serverless/index.mjs:1378:23)
+2025-11-09 19:37:53.61
+cafde262
+User
+at Cn.query (file:///home/runner/workspace/node_modules/@neondatabase/serverless/index.mjs:1407:63)
+2025-11-09 19:37:53.61
+cafde262
+User
+code: 'ERR_INVALID_URL',
+2025-11-09 19:37:53.61
+cafde262
+User
+input: "'postgresql://neondb_owner:npg_UlROx0owp9uV@ep-tiny-paper-ah43oe5e-pooler.c-3.us-east-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require'"
+2025-11-09 19:37:53.61
+cafde262
+User
+}
+2025-11-09 19:37:53.61
+cafde262
+User
+Get posts error: TypeError: Invalid URL
+2025-11-09 19:37:53.61
+cafde262
+User
+at new URL (node:internal/url:806:29)
+2025-11-09 19:37:53.61
+cafde262
+User
+at Object.parse (file:///home/runner/workspace/node_modules/@neondatabase/serverless/index.mjs:841:225)
+2025-11-09 19:37:53.61
+cafde262
+User
+at parse (file:///home/runner/workspace/node_modules/@neondatabase/serverless/index.mjs:848:1)
+2025-11-09 19:37:53.61
+cafde262
+User
+at new Client (file:///home/runner/workspace/node_modules/@neondatabase/serverless/index.mjs:1226:35)
+2025-11-09 19:37:53.61
+cafde262
+User
+at Cn.newClient (file:///home/runner/workspace/node_modules/@neondatabase/serverless/index.mjs:1378:74)
+2025-11-09 19:37:53.61
+cafde262
+User
+at Cn.connect (file:///home/runner/workspace/node_modules/@neondatabase/serverless/index.mjs:1378:23)
+2025-11-09 19:37:58.46
+cafde262
+User
+WebSocket client connected
